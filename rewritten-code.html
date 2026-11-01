@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Deliverable: The Re-Written Code — COBOL Renewal Framework</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="breadcrumb"><a href="index.html">← Back to Overview</a></div>
+            <h1>The Deliverable: The Re-Written Code</h1>
+            <div class="page-nav page-nav-top">
+                <a href="deliverables.html" class="page-nav-link">← Prev: The Deliverables</a>
+                <a href="playbook.html" class="page-nav-link">Next: The Playbook →</a>
+            </div>
+        </div>
+    </div>
+
+    <main class="container content">
+        <p>The AI doesn't just describe the past — it designs the future. Because business rules are extracted as technology-agnostic EARS specifications, implementation-ready technical designs can be generated in multiple languages from the same BRS.</p>
+
+        <img src="img/language_options.png" alt="Language options — Python, Go, Java" class="full-width-img">
+
+        <h2>Technology Choice Flexibility</h2>
+        <p>The target language becomes a strategic decision made <em>after</em> understanding the system — not a constraint imposed before analysis begins. The same 20 business rules produce equivalent implementations in three languages:</p>
+
+        <table>
+            <thead>
+                <tr><th>Language</th><th>Optimised For</th><th>Deploy Model</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Python 3.10+</strong></td><td>Rapid data enrichment, complex analytics, regulatory processing</td><td>Script (needs runtime)</td></tr>
+                <tr><td><strong>Go 1.22+</strong></td><td>High-concurrency, low-latency batch processing</td><td>Single static binary (~3 MB)</td></tr>
+                <tr><td><strong>Java 17+</strong></td><td>Standard enterprise deployment, JVM service integration</td><td>Fat JAR (needs JVM)</td></tr>
+            </tbody>
+        </table>
+
+        <h2>What "Implementation-Ready" Means</h2>
+        <p>The generated code is not pseudocode or a sketch. It is:</p>
+        <ul>
+            <li><strong>Complete</strong> — full module structure, CLI entry point, configuration, error handling</li>
+            <li><strong>Tested</strong> — table-driven test suites covering all branches and edge cases</li>
+            <li><strong>Traceable</strong> — every function maps back to a specific FRS requirement and BRS rule</li>
+            <li><strong>Production-grade</strong> — buffered I/O, O(1) memory, explicit error returns, zero third-party dependencies</li>
+            <li><strong>Equivalent</strong> — designed to produce byte-identical output to the original COBOL</li>
+        </ul>
+
+        <h2>Example: Billing Deduplication in Go</h2>
+<pre><code>// Core algorithm — faithful to original COBOL MIP1293
+// Compare 17-byte keys at byte offset 2 of each 1341-byte record
+// Security &lt; Daily  → security-only record [G-002]
+// Security &gt; Daily  → new record → write to output
+// Security = Daily  → duplicate  → write to rejections
+
+func Run(cfg Config) (*Result, error) {
+    // ...
+    for !mastEOF || !chgEOF {
+        cmp := bytes.Compare(effMast, effChg)
+        switch {
+        case cmp &lt; 0:  // Security-only
+            res.MastOnlyRecords++
+            // advance security reader
+        case cmp &gt; 0:  // New record
+            outmast.Write(chgBuf[:])
+            res.OutmastWritten++
+            // advance daily reader
+        default:       // Duplicate
+            outrej.Write(chgBuf[:])
+            res.OutrejWritten++
+            // advance both readers
+        }
+    }
+    return &amp;res, nil
+}</code></pre>
+
+        <div class="callout success">
+            <p><strong>Key insight:</strong> Go's <code>bytes.Compare()</code> treats bytes as unsigned by default — matching COBOL binary (BI) comparison semantics perfectly. The single static binary deploys anywhere with no runtime dependencies and starts in ~1ms.</p>
+        </div>
+
+        <h2>From One BRS, Multiple Implementations</h2>
+        <p>The same business rule — for example, <em>"WHEN an account key in the daily billing file matches an account key in the monthly security file, the system SHALL classify that daily billing record as a duplicate"</em> — produces:</p>
+
+        <table>
+            <thead>
+                <tr><th>Aspect</th><th>Python</th><th>Go</th><th>Java</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Key compare</td><td><code>&lt;</code>, <code>&gt;</code>, <code>==</code> on bytes</td><td><code>bytes.Compare()</code> (unsigned)</td><td><code>Byte.toUnsignedInt()</code> loop</td></tr>
+                <tr><td>File I/O</td><td><code>open('rb')</code></td><td><code>bufio.Reader</code> + <code>io.ReadFull</code></td><td><code>BufferedInputStream</code></td></tr>
+                <tr><td>Error model</td><td>Exceptions</td><td>Explicit <code>error</code> returns</td><td>Exceptions + try/catch</td></tr>
+                <tr><td>Memory</td><td>O(1) bytes</td><td>O(1) [1341]byte on stack</td><td>O(1) byte[]</td></tr>
+                <tr><td>Startup</td><td>~50ms</td><td>~1ms</td><td>~200ms</td></tr>
+                <tr><td>Dependencies</td><td>stdlib only</td><td>stdlib only</td><td>stdlib only</td></tr>
+            </tbody>
+        </table>
+
+        <p>All three produce byte-identical output for the same input. The choice is purely strategic: team skills, infrastructure, performance requirements, deployment model.</p>
+    </main>
+
+    <div class="container">
+        <div class="page-nav page-nav-bottom">
+            <a href="deliverables.html" class="page-nav-link">← Prev: The Deliverables</a>
+            <a href="index.html" class="page-nav-link">Back to Overview</a>
+            <a href="playbook.html" class="page-nav-link">Next: The Playbook →</a>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>COBOL Renewal Framework — AI-Assisted Legacy System Modernisation</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Deliverables — COBOL Renewal Framework</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="breadcrumb"><a href="index.html">← Back to Overview</a></div>
+            <h1>The Deliverables: A Permanent Knowledge Base</h1>
+            <div class="page-nav page-nav-top">
+                <a href="why-this-works.html" class="page-nav-link">← Prev: Why This Works</a>
+                <a href="rewritten-code.html" class="page-nav-link">Next: The Re-Written Code →</a>
+            </div>
+        </div>
+    </div>
+
+    <main class="container content">
+        <p>The output of this process is a structured knowledge repository. This ensures you are no longer "hostage to the code" — you become the <strong>owner of the intent</strong>.</p>
+
+        <img src="img/knowledge.png" alt="The Deliverables — a permanent knowledge base" class="full-width-img">
+
+        <h2>The Knowledge Wiki</h2>
+        <p>A set of documents designed to be consumed by both humans and AI assistants. When a new session opens a project, it reads the wiki and immediately has full system context — without needing to re-read the source code.</p>
+
+        <div class="problem-grid">
+            <div class="problem-card">
+                <h3>System Overview</h3>
+                <p>Comprehensive system description detailing all job steps, daily vs. month-end paths, complex run dependencies, and execution context. Every processing branch documented.</p>
+            </div>
+            <div class="problem-card">
+                <h3>Program Inventory</h3>
+                <p>Deep dive into every COBOL program's purpose, internal algorithms, and I/O contracts. Confidence-annotated: every fact marked as CONFIRMED, INFERRED, or GAP.</p>
+            </div>
+            <div class="problem-card">
+                <h3>Data Dictionary</h3>
+                <p>Maps legacy layouts (IMS segments, copybooks) to modern formats with byte offsets and field types. Data structured for accessibility and modern use.</p>
+            </div>
+            <div class="problem-card">
+                <h3>File Catalogue</h3>
+                <p>Roadmap of all data assets — record lengths, consumption patterns, and dependencies across the entire system. Understand who produces and consumes every dataset.</p>
+            </div>
+            <div class="problem-card">
+                <h3>Job Map</h3>
+                <p>Visual and textual representation of data flow and conditional execution. No logic branch left undocumented. Includes return code conventions and step dependencies.</p>
+            </div>
+            <div class="problem-card">
+                <h3>Domain Glossary</h3>
+                <p>Business terminology mapped to technical artefacts. Bridge the gap between what the business calls things and what the code calls them.</p>
+            </div>
+        </div>
+
+        <h2>Wiki Detail: What These Documents Actually Look Like</h2>
+
+        <h3>Program Inventory (excerpt)</h3>
+        <p>Every program is documented with its role, inputs, outputs, and internal processing logic:</p>
+<pre><code>MIP1295 — Core IMS Extraction and Transformation
+  Type:      COBOL E35 DFSORT exit (reentrant)
+  Called by: ICEMAN (S020 via IDMIF023 MODS E35)
+  Role:      Reads IMS BC0QCAP1 segments, transforms to all output load files
+
+  Inputs: IMS unload (20 partitions), BDS run date, billing partition assignment,
+          credit limit % table, credit interest rate table
+  Outputs: 13 separate output files (card loads, billing, Navigator, plastic,
+           limits, related accounts, sub-products)
+
+  Internal Tables:
+    W600-LIMIT-PCT-TABLE (999 entries): FIID+AcctType → EC limit %
+    W600-INT-RATE-TABLE (9999 entries): FIID+ECPlan → Annual Rate
+
+  Processing: For each IMS record group (account):
+    Accumulate segment data → write assembled output records
+    Skip "dud" records (all-zero account numbers)</code></pre>
+
+        <h3>Data Dictionary (excerpt)</h3>
+        <p>Every field mapped with COBOL type, byte size, modern type equivalent, and source segment:</p>
+<pre><code>Field Name (COBOL)       | Python Type | Size           | Source    | Description
+W100-CO-CDE              | int         | S9(4) COMP     | 118000    | Company ID
+W100-PROD-CDE            | str(3)      | X(3)           | 118000    | Product code
+W100-CH-ACCT-NO          | Decimal     | S9(16) COMP-3  | 118000    | Account number (16-digit)
+W100-CURR-STAT-CDE       | str(3)      | X(3)           | 118000    | Current status code
+W100-CURR-CRLN           | Decimal     | S9(11) COMP-3  | 118000    | Current credit line
+W100-CR-BAL              | Decimal     | S9(11)V99 CP-3 | 118050    | Credit balance
+W100-EXTD-CR-CURR-BAL    | Decimal     | S9(11)V99 CP-3 | 118056    | Extended credit balance
+W100-TD-EMB-NM-LN-1      | str(26)     | X(26)          | 118072    | Embossed name line 1</code></pre>
+
+        <h3>File Catalogue (excerpt)</h3>
+        <p>Every dataset documented with record length, format, content, and consumer:</p>
+<pre><code>Dataset                                    | LRECL | RECFM | Content
+IDMI.ZAF.FC.CARD.ACCT.BILL.FULL.SORTED    | 1341  | FB    | Monthly billing security (sorted)
+IDMI.ZAF.FC.CARD.ACCT.BILL.TEMP.SORTED    | 1341  | FB    | Daily billing (sorted)
+IDMI.ZAF.FC.CARD.ACCT.BILL.SEC(+1)        | 1341  | FB    | New billing records output
+IDMI.ZAF.FC.CARD.BILL.REJDUPS.SEC(+1)     | 1341  | FB    | Duplicate rejections
+BCNE.ZAF.BCNE393D.STMTDATA.SEC1(0)        | 1500  | FB    | Navigator statement summary</code></pre>
+
+        <h3>Job Map (excerpt)</h3>
+        <p>Conditional execution flow with branching logic clearly documented:</p>
+<pre><code>S040  MIP0823  Month detection      [IF S020.RC=0]
+│     RC=0 → daily path
+│     RC=1 → month-end path
+│
+├─[RC=0]─► S050  Sort monthly security        [daily only]
+│           S060  MIP1293 Dedup billing        [daily only]
+│           S080  Append to monthly security   [daily only]
+│
+├─[RC=1]─► S042  Roll NavBill → monthly GDG   [month-end only]
+│           S070  New billing security         [month-end only]
+│           S090  Copy sorted temp             [month-end only]</code></pre>
+
+        <h2>Component Specification Set</h2>
+        <p>For each component selected for modernisation, the framework produces a complete specification library:</p>
+
+        <table>
+            <thead>
+                <tr><th>Document</th><th>Purpose</th><th>Key Property</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>BRS</strong> — Business Rules</td><td>EARS rules describing what the system does</td><td>Technology-agnostic, testable, traceable to source</td></tr>
+                <tr><td><strong>FRS</strong> — Functional Requirements</td><td>System-level behaviour with data mappings</td><td>Byte-level precision, edge cases explicit</td></tr>
+                <tr><td><strong>TDD</strong> — Technical Design</td><td>Implementation-ready code in target language(s)</td><td>Multiple languages from same BRS</td></tr>
+                <tr><td><strong>GAPS</strong> — Open Questions</td><td>Ambiguities requiring human resolution</td><td>Prioritised, with evidence and resolution paths</td></tr>
+            </tbody>
+        </table>
+
+        <p>Because business rules are technology-agnostic, the same specification set also drives multiple language implementations — see <a href="rewritten-code.html">The Re-Written Code</a> for how that plays out.</p>
+
+        <h2>What Makes This Different</h2>
+        <ul>
+            <li><strong>Self-contained</strong> — the wiki alone is sufficient to understand the system</li>
+            <li><strong>Machine-parseable</strong> — JSON versions alongside markdown for programmatic use</li>
+            <li><strong>Confidence-annotated</strong> — every fact marked as CONFIRMED, INFERRED, or GAP</li>
+            <li><strong>Source-referenced</strong> — every fact traces to a specific code location</li>
+            <li><strong>Persistent</strong> — knowledge that outlives any individual developer or AI session</li>
+        </ul>
+    </main>
+
+    <div class="container">
+        <div class="page-nav page-nav-bottom">
+            <a href="why-this-works.html" class="page-nav-link">← Prev: Why This Works</a>
+            <a href="index.html" class="page-nav-link">Back to Overview</a>
+            <a href="rewritten-code.html" class="page-nav-link">Next: The Re-Written Code →</a>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>COBOL Renewal Framework — AI-Assisted Legacy System Modernisation</p>
+        </div>
+    </footer>
+</body>
+</html>

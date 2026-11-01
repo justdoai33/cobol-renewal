@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Before &amp; After — COBOL Renewal Framework</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="breadcrumb"><a href="index.html">← Back to Overview</a></div>
+            <h1>Before &amp; After</h1>
+            <div class="page-nav page-nav-top">
+                <a href="imperative.html" class="page-nav-link">← Prev: The Modernisation Imperative</a>
+                <a href="breakthrough.html" class="page-nav-link">Next: The Breakthrough →</a>
+            </div>
+        </div>
+    </div>
+
+    <main class="container content">
+        <div class="callout">
+            <p>On the left: raw COBOL source — the core deduplication logic from a production billing system. On the right: what the framework produced from it. One working session. ~500 words of human input.</p>
+        </div>
+
+        <img src="img/legacy_modernization_evolution.png" alt="Legacy Modernization Evolution" class="full-width-img">
+
+        <h2>The Source: Raw COBOL (208 lines)</h2>
+        <p>No documentation. No comments explaining business intent. Commented-out code with unknown significance. A developer unfamiliar with this system would need days to understand what it does — and still might get it wrong.</p>
+
+        <div class="split-view">
+            <div class="split-panel">
+                <div class="split-panel-header before">BEFORE — Raw COBOL (excerpt)</div>
+<pre><code>000010 IDENTIFICATION DIVISION.
+000030 PROGRAM-ID.         MIP1293.
+000040 AUTHOR.             ROGER MOSS.
+000400* COMPARE THE BILLING FILE AGAINST THE MONTHLY ACCUMULATIVE
+000400* SECURITY. IF ALREADY FOUND THEN REJECT ELSE WILL ABEND
+000400* ON SYBASE WITH DUPS.
+
+       01     W-EOF-MAST          PIC X VALUE  'N'.
+       01     W-EOF-CHG           PIC X VALUE  'N'.
+       01  W-COMPARE.
+           05 W-COMPARE-MAST  PIC X(17).
+           05 W-COMPARE-CHG   PIC X(17).
+
+       A-TOP SECTION.
+           OPEN INPUT INMAST
+           OPEN INPUT INCHG.
+           OPEN OUTPUT OUTMAST.
+           OPEN OUTPUT OUTREJ.
+           READ INMAST AT END
+                       MOVE 'INSERT    ' TO WS-DUMP-ACTION
+                       MOVE 9999         TO WS-DUMP-CODE
+                       ADD 1             TO WS-DUMP.
+           MOVE INMAST-REC(3:17) TO W-COMPARE-MAST.
+           READ INCHG AT END MOVE 'Y' TO W-EOF-CHG.
+           PERFORM B-MAIN UNTIL W-EOF-MAST = 'Y'
+                            AND W-EOF-CHG = 'Y'.
+
+       B-MAIN SECTION.
+       B-FIND.
+           IF W-COMPARE-MAST < W-COMPARE-CHG
+              MOVE INMAST-REC TO OUTMAST-REC
+      *       WRITE OUTMAST-REC
+              PERFORM Z-READ-MAST
+              GO TO B-EXIT.
+           IF W-COMPARE-MAST > W-COMPARE-CHG
+              MOVE INCHG-REC  TO OUTMAST-REC
+              WRITE OUTMAST-REC
+              PERFORM Z-READ-CHG
+              GO TO B-EXIT.
+           IF W-COMPARE-MAST = W-COMPARE-CHG
+              MOVE INCHG-REC  TO OUTREJ-REC
+              WRITE OUTREJ-REC
+              PERFORM Z-READ-MAST
+              PERFORM Z-READ-CHG
+              GO TO B-EXIT.</code></pre>
+            </div>
+            <div class="split-panel">
+                <div class="split-panel-header after">AFTER — Extracted Business Rules</div>
+<pre><code>BR-001: The billing deduplication process
+SHALL process records in ascending account
+key sequence.
+
+BR-003: WHEN an account key in the daily
+billing file matches an account key in the
+monthly security file, the system SHALL
+classify that daily billing record as a
+duplicate.
+
+BR-004: WHEN a daily billing record is
+classified as a duplicate, the system SHALL
+write it to the duplicate rejection file.
+
+BR-006: The account key used for comparison
+SHALL be a 17-byte value comprising the
+company identifier, product code, and account
+number fields, located at bytes 3–19.
+
+BR-007: WHEN an account key exists in the
+daily billing file but does not exist in
+the monthly security file, the system SHALL
+classify that record as a new billing record.
+
+BR-009: [PARTIAL — see GAPS G-002]
+WHEN an account key exists in the monthly
+security file but does not exist in the daily
+billing file, the system SHALL [determine
+correct disposition — see gap].
+
+→ The commented-out WRITE was caught.
+→ Flagged as highest-priority gap.
+→ Two interpretations documented.
+→ Evidence gathered from surrounding code.
+→ Resolution path identified.</code></pre>
+            </div>
+        </div>
+
+        <h2>The Transformation</h2>
+        
+        <div class="split-view">
+            <div class="split-panel">
+                <div class="split-panel-header before">BEFORE — What you had</div>
+<pre><code>• 208 lines of COBOL
+• 2 lines of developer comments
+• No documentation
+• Commented-out code (bug or feature?)
+• Implicit error handling (ABEND)
+• No record of business intent
+• Single language, single platform
+• Undocumented dependencies</code></pre>
+            </div>
+            <div class="split-panel">
+                <div class="split-panel-header after">AFTER — What the framework produced</div>
+<pre><code>• 20 testable EARS business rules
+• 15 functional requirements with data maps
+• Implementation-ready Python design
+• Java and Go variants (same algorithm)
+• 10 documented gaps with resolution paths
+• Full traceability (COBOL → BRS → FRS → TDD)
+• Explicit error handling specification
+• Byte-level record layouts
+• Confidence annotations on every fact
+• Clear separation of "known" vs "unknown"</code></pre>
+            </div>
+        </div>
+
+        <h2>Key Observations</h2>
+        <ul>
+            <li><strong>The commented-out WRITE was caught</strong> — this is a critical ambiguity that affects output correctness. A human reading the code might miss it or assume it's debug cleanup. The framework flagged it as the highest-priority open question.</li>
+            <li><strong>Business rules are technology-agnostic</strong> — BR-003 says "WHEN an account key matches, classify as duplicate." It doesn't say "IF W-COMPARE-MAST = W-COMPARE-CHG." This means the same rules drive Python, Java, or Go implementations.</li>
+            <li><strong>Every rule traces back to a source line</strong> — BR-003 comes from MIP1293.cob line 01810. When a stakeholder asks "why does the new system reject this record?", the answer chain is complete.</li>
+            <li><strong>Edge cases are explicit</strong> — what happens when the security file is empty? When the daily file is empty? When both are empty? The COBOL handles some of these implicitly (or not at all). The specification forces explicit decisions.</li>
+        </ul>
+
+        <h2>The Numbers</h2>
+        <table>
+            <thead>
+                <tr><th>Metric</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>COBOL source (this component)</td><td>208 lines</td></tr>
+                <tr><td>Total specification output</td><td>~6,000 words across 4 documents</td></tr>
+                <tr><td>Human input required</td><td>~50 words (confirm scope, choose language)</td></tr>
+                <tr><td>Time from source to complete spec</td><td>~45 minutes</td></tr>
+                <tr><td>Ambiguities identified</td><td>10 (2 HIGH priority)</td></tr>
+                <tr><td>Implementation languages produced</td><td>3 (Python, Java, Go)</td></tr>
+            </tbody>
+        </table>
+    </main>
+
+    <div class="container">
+        <div class="page-nav page-nav-bottom">
+            <a href="imperative.html" class="page-nav-link">← Prev: The Modernisation Imperative</a>
+            <a href="index.html" class="page-nav-link">Back to Overview</a>
+            <a href="breakthrough.html" class="page-nav-link">Next: The Breakthrough →</a>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>COBOL Renewal Framework — AI-assisted legacy modernisation</p>
+        </div>
+    </footer>
+</body>
+</html>

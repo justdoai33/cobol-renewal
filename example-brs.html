@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Rules (BRS) — COBOL Renewal Framework</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="breadcrumb"><a href="index.html">← Back to Overview</a></div>
+            <h1>Business Rules Specification — Billing Deduplication</h1>
+        </div>
+    </div>
+
+    <main class="container content">
+        <div class="callout">
+            <p>This is a real BRS produced by the framework from a production COBOL billing deduplication program. It demonstrates technology-agnostic EARS rules, traceable back to specific COBOL source lines and forward to implementation.</p>
+        </div>
+
+        <h2>Section 1: Overview</h2>
+        <p>The billing deduplication process compares the current day's cardholder billing records against the accumulated monthly billing security file. Its purpose is to prevent any cardholder billing record that has already been loaded to the downstream system from being loaded again. Each cardholder account must appear at most once in any given monthly billing load.</p>
+        <p>The process runs as part of the daily processing path only. On the first business day of a new month, the monthly security is empty (reset by the month-end path) and all records are treated as new.</p>
+        <p>This process runs twice per job execution: once for standard card accounts, and once for a secondary card brand. Both runs are functionally identical; they operate on separate streams of data.</p>
+
+        <h2>Section 2: Inputs</h2>
+        <table>
+            <thead>
+                <tr><th>Input</th><th>Business Name</th><th>Pre-condition</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Monthly Billing Security</td><td>The accumulated set of all billing records already loaded this month</td><td>Must be pre-sorted in account key sequence. May be empty on first day of month.</td></tr>
+                <tr><td>Daily Billing File</td><td>Today's new billing records from the card account extraction</td><td>Must be pre-sorted in the same account key sequence as the security file. Must not be empty.</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Section 3: Outputs</h2>
+        <table>
+            <thead>
+                <tr><th>Output</th><th>Business Name</th><th>Content</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Updated Billing Security</td><td>The new monthly security including today's new records</td><td>Records that are either: (a) from today's file and not already in the security, or (b) from the security. Written in account key sequence.</td></tr>
+                <tr><td>Duplicate Rejection File</td><td>Billing records identified as already loaded</td><td>Records from today's file whose account key already exists in the monthly security. Written for audit and investigation purposes.</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Section 4: Business Rules</h2>
+
+        <h3>4.1 Processing Sequence</h3>
+        <p><strong>BR-001:</strong> The billing deduplication process SHALL process records in ascending account key sequence.</p>
+        <p><strong>BR-002:</strong> The billing deduplication process SHALL process all records from both the monthly security file and the daily billing file before terminating.</p>
+
+        <h3>4.2 Duplicate Detection</h3>
+        <p><strong>BR-003:</strong> WHEN an account key in the daily billing file matches an account key in the monthly security file, the system SHALL classify that daily billing record as a duplicate.</p>
+        <p><strong>BR-004:</strong> WHEN a daily billing record is classified as a duplicate, the system SHALL write it to the duplicate rejection file.</p>
+        <p><strong>BR-005:</strong> WHEN a daily billing record is classified as a duplicate, the system SHALL NOT write it to the updated billing security.</p>
+        <p><strong>BR-006:</strong> The account key used for comparison SHALL be a 17-byte value comprising the company identifier, product code, and account number fields, located at bytes 3 through 19 of each record.</p>
+
+        <h3>4.3 New Record Handling</h3>
+        <p><strong>BR-007:</strong> WHEN an account key exists in the daily billing file but does not exist in the monthly security file, the system SHALL classify that record as a new billing record.</p>
+        <p><strong>BR-008:</strong> WHEN a daily billing record is classified as new, the system SHALL write it to the updated billing security.</p>
+
+        <h3>4.4 Security File Passthrough</h3>
+        <p><strong>BR-009:</strong> <span class="badge badge-high">PARTIAL</span> WHEN an account key exists in the monthly security file but does not exist in the daily billing file, the system SHALL [determine correct disposition — see gap G-002].</p>
+
+        <h3>4.5 Completion</h3>
+        <p><strong>BR-010:</strong> WHILE records remain unprocessed in either input file, the system SHALL continue processing.</p>
+        <p><strong>BR-011:</strong> WHEN both input files are exhausted, the system SHALL close all files and terminate normally.</p>
+
+        <h3>4.6 Empty File Handling</h3>
+        <p><strong>BR-012:</strong> IF the monthly security file is empty at the start of processing, the system SHALL treat all daily billing records as new records.</p>
+        <p><strong>BR-013:</strong> <span class="badge badge-high">PARTIAL</span> IF the daily billing file is empty, the system SHALL [determine correct behaviour — see gap G-004].</p>
+
+        <h3>4.7 Audit</h3>
+        <p><strong>BR-014:</strong> The system SHALL produce a duplicate rejection file on every execution, even if no duplicates are found (the file may be empty).</p>
+        <p><strong>BR-015:</strong> The system SHALL produce an updated billing security file on every execution, even if no new records are found (the file may be empty).</p>
+
+        <h2>Section 7: Error Handling</h2>
+        <p><strong>BR-016:</strong> IF a file I/O error occurs during processing, the system SHALL terminate with a non-zero exit code.</p>
+        <p><strong>BR-017:</strong> <span class="badge badge-high">PARTIAL</span> IF a record is encountered with an unexpected length or format, the system SHALL [determine correct behaviour — see gap G-005].</p>
+
+        <h2>Section 8: Constraints</h2>
+        <p><strong>BR-018:</strong> The billing deduplication process SHALL only run during the daily processing path (i.e., when the current processing month is the same as the previous processing month).</p>
+        <p><strong>BR-019:</strong> The monthly security file and daily billing file SHALL both be sorted in ascending account key sequence before this process runs.</p>
+        <p><strong>BR-020:</strong> The billing deduplication process SHALL be executed separately for standard card accounts and secondary brand accounts. The two streams SHALL NOT be mixed.</p>
+
+        <h2>Section 9: Traceability</h2>
+        <table>
+            <thead>
+                <tr><th>Business Rule</th><th>COBOL Source</th><th>Location</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>BR-001</td><td>SORT FIELDS=(3,17,BI,A)</td><td>Sort control</td></tr>
+                <tr><td>BR-002</td><td>PERFORM B-MAIN UNTIL W-EOF-MAST='Y' AND W-EOF-CHG='Y'</td><td>Line 01560</td></tr>
+                <tr><td>BR-003</td><td>IF W-COMPARE-MAST = W-COMPARE-CHG</td><td>Line 01810</td></tr>
+                <tr><td>BR-004</td><td>MOVE INCHG-REC TO OUTREJ-REC / WRITE OUTREJ-REC</td><td>Lines 01850–01870</td></tr>
+                <tr><td>BR-006</td><td>INMAST-REC(3:17) / INCHG-REC(3:17)</td><td>Lines 01480, 01520</td></tr>
+                <tr><td>BR-007</td><td>IF W-COMPARE-MAST > W-COMPARE-CHG</td><td>Line 01750</td></tr>
+                <tr><td>BR-008</td><td>MOVE INCHG-REC TO OUTMAST-REC / WRITE OUTMAST-REC</td><td>Lines 01760–01780</td></tr>
+                <tr><td>BR-009</td><td>IF W-COMPARE-MAST < W-COMPARE-CHG (WRITE commented out)</td><td>Lines 01690–01740</td></tr>
+                <tr><td>BR-012</td><td>READ INMAST AT END ADD 1 TO WS-DUMP</td><td>Line 01410</td></tr>
+                <tr><td>BR-018</td><td>IF (S040.RC=0 &amp; S040.RUN)</td><td>JCL step condition</td></tr>
+                <tr><td>BR-020</td><td>Separate S060 (normal) and S060A (secondary) steps</td><td>JCL</td></tr>
+            </tbody>
+        </table>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>COBOL Renewal Framework — AI-assisted legacy modernisation</p>
+        </div>
+    </footer>
+</body>
+</html>

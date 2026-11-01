@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Questions (GAPS) — COBOL Renewal Framework</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="breadcrumb"><a href="index.html">← Back to Overview</a></div>
+            <h1>GAPS — Open Questions Requiring Human Resolution</h1>
+        </div>
+    </div>
+
+    <main class="container content">
+        <div class="callout">
+            <p>The GAPS document is what sets this framework apart from "we'll just ask AI to rewrite it." Every ambiguity is flagged honestly, with evidence from the code, impact assessment, and a clear resolution path. Nothing gets swept under the rug.</p>
+        </div>
+
+        <h2>Gap Status Summary</h2>
+        <table>
+            <thead>
+                <tr><th>Gap</th><th>Description</th><th>Priority</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>G-001</td><td>India-specific steps — applicability to target environment</td><td><span class="badge badge-low">Low</span></td><td>Open</td></tr>
+                <tr><td>G-002</td><td>Security-only records — WRITE commented out in source</td><td><span class="badge badge-high">HIGH</span></td><td>Open</td></tr>
+                <tr><td>G-003</td><td>Complete account status code list</td><td><span class="badge badge-medium">Medium</span></td><td>Open</td></tr>
+                <tr><td>G-004</td><td>Empty daily billing file behaviour</td><td><span class="badge badge-medium">Medium</span></td><td>Open</td></tr>
+                <tr><td>G-005</td><td>Malformed record handling</td><td><span class="badge badge-low">Low</span></td><td>Open</td></tr>
+                <tr><td>G-006</td><td>Sort order validation — defensive addition</td><td><span class="badge badge-low">Low</span></td><td>Open</td></tr>
+                <tr><td>G-007</td><td>Equivalence testing strategy</td><td><span class="badge badge-high">HIGH</span></td><td>Open</td></tr>
+                <tr><td>G-008</td><td>File versioning in modernised system</td><td><span class="badge badge-medium">Medium</span></td><td>Open</td></tr>
+                <tr><td>G-009</td><td>Diagnostic ABEND on empty file — intentional?</td><td><span class="badge badge-low">Low</span></td><td>Open</td></tr>
+                <tr><td>G-010</td><td>Secondary card brand — business significance of separation</td><td><span class="badge badge-medium">Medium</span></td><td>Open</td></tr>
+            </tbody>
+        </table>
+
+        <h2>G-002: Security-Only Records — WRITE Commented Out</h2>
+        <p><span class="badge badge-high">HIGH — affects output correctness</span></p>
+        <p><strong>Affects:</strong> Core deduplication logic, BRS BR-009, FRS FR-006, TDD main branch</p>
+
+        <h3>Question</h3>
+        <p>In the original COBOL, the handling of the case where a record exists in the monthly security but has no matching record in today's billing file contains a <strong>commented-out WRITE statement</strong>:</p>
+
+<pre><code>IF W-COMPARE-MAST < W-COMPARE-CHG
+   MOVE INMAST-REC TO OUTMAST-REC
+*  DISPLAY 'LESS ' OUTMAST-REC(3:20)       ← commented debug display
+*  WRITE OUTMAST-REC                        ← WRITE IS COMMENTED OUT
+   PERFORM Z-READ-MAST
+   GO TO B-EXIT.</code></pre>
+
+        <p>The WRITE is commented out. This means records that are only in the security (not in today's billing) are <strong>NOT written to the output</strong>.</p>
+
+        <h3>Two Interpretations</h3>
+        <p><strong>Interpretation A (output = new records only):</strong> The commented-out WRITE is intentional. Output only ever contains records from the daily file that are not yet in the security. The full security accumulation is handled by a separate downstream step that concatenates the previous security + today's new records.</p>
+        <p><strong>Interpretation B (output = full updated security):</strong> The commented-out WRITE is a bug. Output should contain all records: prior security records (passed through) plus today's new records.</p>
+
+        <h3>Evidence Supporting Interpretation A</h3>
+        <ul>
+            <li>A downstream concatenation step exists that explicitly builds the full security independently</li>
+            <li>The output file and the accumulated security file are different datasets</li>
+            <li>The downstream load system likely only needs today's new records on each run</li>
+        </ul>
+
+        <h3>Impact on Modernisation</h3>
+        <p>This is the single highest-priority gap. If Interpretation A is correct, the implementation is straightforward. If B, we need to understand why the WRITE was removed and whether the current system is producing incorrect output.</p>
+
+        <h3>Information Needed</h3>
+        <ul>
+            <li>Original developer or a business analyst who knows the downstream load requirements</li>
+            <li>What does the downstream process do with the output file? Does it expect all records for the month, or just today's new ones?</li>
+        </ul>
+
+        <h2>G-007: Equivalence Testing Strategy</h2>
+        <p><span class="badge badge-high">HIGH — required before production deployment</span></p>
+
+        <h3>Question</h3>
+        <p>How will we prove that the modernised implementation produces identical output to the COBOL for the same input?</p>
+        <ol>
+            <li>Can we obtain a set of real (or representative) input files from production?</li>
+            <li>Can we obtain the corresponding COBOL output files to compare against?</li>
+            <li>Are there any known cases where the COBOL output is incorrect?</li>
+            <li>What is the tolerance for differences — must output be byte-for-byte identical?</li>
+        </ol>
+
+        <div class="callout warning">
+            <p><strong>Impact:</strong> Without an equivalence testing strategy, we cannot confidently deploy the modernised system. This gap must be resolved before any production-readiness work begins.</p>
+        </div>
+
+        <h2>G-004: Empty Daily Billing File Behaviour</h2>
+        <p><span class="badge badge-medium">Medium</span></p>
+        
+        <h3>Question</h3>
+        <p>What should happen if the daily billing file is empty? The original COBOL does not explicitly handle this case. Should an empty daily file be treated as:</p>
+        <ul>
+            <li>(a) Normal — output files are empty, job continues</li>
+            <li>(b) Warning — log and continue</li>
+            <li>(c) Error — abort the job</li>
+        </ul>
+        <p>In production, has the daily file ever been empty?</p>
+
+        <h2>G-008: File Versioning in Modernised System</h2>
+        <p><span class="badge badge-medium">Medium</span></p>
+        
+        <h3>Question</h3>
+        <p>The original system uses GDG (Generation Data Group) semantics — each run creates a new generation and reads the current one. The modernised batch system needs an equivalent mechanism. Options:</p>
+        <ul>
+            <li>(a) Date-stamped filenames</li>
+            <li>(b) A file management layer with "current" symlinks</li>
+            <li>(c) A database table tracking file versions</li>
+            <li>(d) Object storage with versioning (e.g. S3)</li>
+        </ul>
+        <p>Decision depends on target infrastructure and downstream system requirements.</p>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>COBOL Renewal Framework — AI-assisted legacy modernisation</p>
+        </div>
+    </footer>
+</body>
+</html>

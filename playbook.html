@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Playbook — COBOL Renewal Framework</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="breadcrumb"><a href="index.html">← Back to Overview</a></div>
+            <h1>The Playbook</h1>
+            <div class="page-nav page-nav-top">
+                <a href="rewritten-code.html" class="page-nav-link">← Prev: The Re-Written Code</a>
+                <a href="path-forward.html" class="page-nav-link">Next: The Path Forward →</a>
+            </div>
+        </div>
+    </div>
+
+    <main class="container content">
+        <p>Step-by-step guide for using this framework to reverse engineer and modernise a COBOL/JCL batch system. Follow this sequence for each new project.</p>
+
+        <h2>Before You Start</h2>
+        <p><strong>You need:</strong></p>
+        <ul>
+            <li>Source artefacts extracted from the mainframe (JCL, COBOL programs, copybooks, sort controls)</li>
+            <li>Python 3.10+ installed</li>
+            <li>An AI-powered development environment</li>
+            <li>A named workspace directory for the project</li>
+        </ul>
+        <p><strong>You don't need:</strong></p>
+        <ul>
+            <li>Prior documentation of the system (that's what this framework produces)</li>
+            <li>Deep COBOL expertise (the AI does the reading — you validate the output)</li>
+            <li>The target implementation language decided upfront (decide after analysis)</li>
+        </ul>
+
+        <h2>The Steps</h2>
+
+        <ol class="phase-list">
+            <li>
+                <strong>Initialise the Project</strong>
+                Run the init script — this creates the project structure, copies framework files, and runs pre-processing tools automatically. If source files aren't available yet, initialise empty and add them later.
+                <br><br><em>Output: A git-versioned project with steering, skills, templates, tools, and metadata.</em>
+            </li>
+            <li>
+                <strong>Pre-Process Source</strong>
+                Automated parsers extract metadata from JCL (dependencies, step flow), copybooks (field definitions with byte offsets), and sort controls (key specifications). Reports any missing artefacts.
+                <br><br><em>Gate: Do not proceed until all referenced artefacts are available or explicitly acknowledged as unavailable.</em>
+            </li>
+            <li>
+                <strong>Reverse Engineer</strong>
+                The AI reads all source artefacts — JCL first to understand job flow, then COBOL, copybooks, and sort controls. Produces a narrative analysis and generates the project-specific context.
+                <br><br><em>Your role: Confirm environment variables, answer clarifying questions, identify the PoC component.</em>
+            </li>
+            <li>
+                <strong>Generate Knowledge Base (Wiki)</strong>
+                The AI produces structured documents: system overview, program inventory, data dictionary, file catalogue, job map, and domain glossary.
+                <br><br><em>Your role: Review each document for accuracy. Flag items you know to be incorrect.</em>
+            </li>
+            <li>
+                <strong>Generate Component Specifications</strong>
+                For your chosen component, produces: BRS (EARS business rules), FRS (functional requirements), TDD (technical design in target language), GAPS (open questions).
+                <br><br><em>Your role: Validate BRS against business knowledge. Choose target language. Review TDD for architectural fit.</em>
+            </li>
+            <li>
+                <strong>Validate</strong>
+                Automated checks: all 9 sections present, traceability chain unbroken (COBOL → BRS → FRS → TDD), cross-references consistent, no unresolved markers.
+            </li>
+            <li>
+                <strong>Resolve Gaps</strong>
+                Work through open questions with business SMEs. HIGH-priority gaps must be resolved before implementation. Each resolution updates the affected spec documents.
+            </li>
+            <li>
+                <strong>Implement</strong>
+                Build from the TDD. Run equivalence testing — compare output byte-for-byte against COBOL output. Fix differences. Get stakeholder sign-off.
+            </li>
+            <li>
+                <strong>Expand</strong>
+                Repeat steps 5–8 for each additional component. The wiki and context already exist — each new component only needs its spec set. ~2 hours per component.
+            </li>
+        </ol>
+
+        <h2>Skills (On-Demand AI Commands)</h2>
+        <table>
+            <thead>
+                <tr><th>Skill</th><th>When</th><th>What It Does</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>#pre-process-source</code></td><td>After placing source files</td><td>Runs parsers, checks for missing files</td></tr>
+                <tr><td><code>#reverse-engineer-cobol</code></td><td>After pre-processing</td><td>Full system analysis, produces narrative</td></tr>
+                <tr><td><code>#generate-wiki</code></td><td>After analysis confirmed</td><td>Creates wiki documents</td></tr>
+                <tr><td><code>#generate-spec</code></td><td>After wiki complete</td><td>Creates BRS/FRS/TDD/GAPS for one component</td></tr>
+                <tr><td><code>#validate-spec</code></td><td>After specs created</td><td>Quality checks and cross-reference validation</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Tools (Automated Scripts)</h2>
+        <table>
+            <thead>
+                <tr><th>Tool</th><th>Purpose</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>tools/parse_jcl.py</code></td><td>Extract JCL step dependencies → JSON</td></tr>
+                <tr><td><code>tools/parse_copybooks.py</code></td><td>Extract copybook field definitions → JSON</td></tr>
+                <tr><td><code>tools/parse_sort_controls.py</code></td><td>Extract sort key specifications → JSON</td></tr>
+                <tr><td><code>tools/init_project.sh</code></td><td>Create project structure and run pre-processing</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Timeline</h2>
+        <table>
+            <thead>
+                <tr><th>Activity</th><th>Duration</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Project init + pre-processing</td><td>15 minutes</td><td>Automated</td></tr>
+                <tr><td>Reverse engineering analysis</td><td>1–2 hours</td><td>AI does reading; you confirm</td></tr>
+                <tr><td>Wiki generation</td><td>30–60 minutes</td><td>AI generates; you review</td></tr>
+                <tr><td>Spec generation (per component)</td><td>1–2 hours</td><td>AI generates; you validate</td></tr>
+                <tr><td>Gap resolution</td><td>1–5 days</td><td>Depends on SME availability</td></tr>
+                <tr><td>Implementation + equivalence testing</td><td>1–2 weeks</td><td>Per component</td></tr>
+            </tbody>
+        </table>
+
+        <div class="callout success">
+            <p><strong>First component (analysis through spec):</strong> One working session (~4 hours)<br>
+            <strong>Each subsequent component:</strong> ~2 hours (wiki already exists)</p>
+        </div>
+    </main>
+
+    <div class="container">
+        <div class="page-nav page-nav-bottom">
+            <a href="rewritten-code.html" class="page-nav-link">← Prev: The Re-Written Code</a>
+            <a href="index.html" class="page-nav-link">Back to Overview</a>
+            <a href="path-forward.html" class="page-nav-link">Next: The Path Forward →</a>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>COBOL Renewal Framework — AI-Assisted Legacy System Modernisation</p>
+        </div>
+    </footer>
+</body>
+</html>

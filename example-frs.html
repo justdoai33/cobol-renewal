@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Functional Requirements (FRS) — COBOL Renewal Framework</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="breadcrumb"><a href="index.html">← Back to Overview</a></div>
+            <h1>Functional Requirements Specification — Billing Deduplication</h1>
+        </div>
+    </div>
+
+    <main class="container content">
+        <div class="callout">
+            <p>The FRS bridges business rules and technical design. It defines system-level behaviour with full data mappings, exact byte offsets, and record layouts — enough detail for any developer to implement correctly.</p>
+        </div>
+
+        <h2>Section 1: Overview</h2>
+        <p><strong>Component:</strong> billing-deduplication</p>
+        <p><strong>Pipeline position:</strong> Receives merged, sorted billing records from the field merge stage. Produces the updated monthly billing security for downstream system loading.</p>
+        <p><strong>Run context:</strong> Daily processing path only</p>
+
+        <h2>Section 2: Inputs</h2>
+        
+        <h3>2.1 Monthly Billing Security (INMAST)</h3>
+        <table>
+            <thead>
+                <tr><th>Attribute</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Record length</td><td>1341 bytes</td></tr>
+                <tr><td>Record format</td><td>FB (fixed blocked)</td></tr>
+                <tr><td>Sort order</td><td>Ascending on bytes 3–19 (17-byte account key, binary)</td></tr>
+                <tr><td>Pre-condition</td><td>Must be sorted. May be empty (first day of month).</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Record Layout (1341 bytes)</h3>
+        <table>
+            <thead>
+                <tr><th>Bytes (1-based)</th><th>Length</th><th>Field</th><th>Type</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>1–2</td><td>2</td><td>part_no</td><td>binary int</td><td>Billing partition number</td></tr>
+                <tr><td>3–4</td><td>2</td><td>co_cde</td><td>S9(4) COMP</td><td>Company ID</td></tr>
+                <tr><td>5–7</td><td>3</td><td>prod_cde</td><td>X(3)</td><td>Product code</td></tr>
+                <tr><td>8–19</td><td>12</td><td>ch_acct_no</td><td>S9(16) COMP-3</td><td>Account number (packed decimal)</td></tr>
+                <tr><td>20–1341</td><td>1322</td><td>remainder</td><td>X</td><td>Balance and attribute data</td></tr>
+            </tbody>
+        </table>
+
+        <p><strong>Deduplication key:</strong> bytes 3–19 (17 bytes), 0-based Python slice: <code>record[2:19]</code></p>
+
+        <h2>Section 5: Functional Requirements</h2>
+        
+        <h3>5.1 Pre-processing Validation</h3>
+        <p><strong>FR-001:</strong> The process SHALL open all input and output files before any record processing begins.</p>
+        <p><strong>FR-002:</strong> The process SHALL perform an initial read of INMAST. IF INMAST is empty, the process SHALL log a diagnostic message and set MAST comparison key to HIGH-VALUES (so all incoming records are treated as new).</p>
+        <p><strong>FR-003:</strong> The process SHALL perform an initial read of INCHG. IF INCHG is empty, the process SHALL set CHG comparison key to SPACES and continue.</p>
+
+        <h3>5.2 Main Processing Loop</h3>
+        <p><strong>FR-004:</strong> The process SHALL repeat the comparison loop until both input files are exhausted (EOF on both files).</p>
+        <p><strong>FR-005:</strong> On each iteration, the process SHALL compare the 17-byte key of the current security record against the 17-byte key of the current daily record.</p>
+
+        <h3>Branch 1: Security key &lt; Daily key</h3>
+        <p><strong>FR-006:</strong> WHEN the current security key is less than the current daily key, the process SHALL [see GAPS G-002 for correct disposition].</p>
+        <p><strong>FR-007:</strong> After processing the security record, the process SHALL read the next record from the security file.</p>
+        <p><strong>FR-008:</strong> IF the security file is exhausted, the process SHALL set the security key to HIGH-VALUES and set the EOF flag.</p>
+
+        <h3>Branch 2: Security key &gt; Daily key</h3>
+        <p><strong>FR-009:</strong> WHEN the current security key is greater than the current daily key, the process SHALL write the current daily record to the output security (new record — not yet in security).</p>
+        <p><strong>FR-010:</strong> After processing the daily record, the process SHALL read the next record from the daily file.</p>
+        <p><strong>FR-011:</strong> IF the daily file is exhausted, the process SHALL set the daily key to HIGH-VALUES and set the EOF flag.</p>
+
+        <h3>Branch 3: Keys equal (duplicate)</h3>
+        <p><strong>FR-012:</strong> WHEN the current security key equals the current daily key, the process SHALL write the current daily record to the rejection file (duplicate).</p>
+        <p><strong>FR-013:</strong> After processing a duplicate, the process SHALL read the next record from both input files.</p>
+
+        <h3>5.3 Post-processing</h3>
+        <p><strong>FR-014:</strong> After the main loop exits, the process SHALL close all files.</p>
+        <p><strong>FR-015:</strong> The process SHALL exit with return code 0 on successful completion.</p>
+
+        <h2>Section 5: Data Mappings</h2>
+        <h3>Key Extraction</h3>
+        <table>
+            <thead>
+                <tr><th>Source field</th><th>Expression</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Security comparison key</td><td><code>record[2:19]</code></td><td>17 bytes, 0-based offset 2</td></tr>
+                <tr><td>Daily comparison key</td><td><code>record[2:19]</code></td><td>Same extraction</td></tr>
+            </tbody>
+        </table>
+
+        <div class="callout">
+            <p><strong>Key insight:</strong> Records written to output are written byte-for-byte unchanged from their source. No field transformation occurs. The process is purely a routing/filtering operation.</p>
+        </div>
+
+        <h2>Section 7: Error Handling &amp; Edge Cases</h2>
+        <h3>Empty Security File (first day of month)</h3>
+        <p>Legitimate at month-start. Sets security key to HIGH-VALUES so all daily records follow the "new record" branch.</p>
+        <p><strong>Modernised system:</strong> Detect empty security at open time. If empty, write all daily records to output with no comparison needed.</p>
+
+        <h3>Unsorted Input</h3>
+        <p>The original COBOL does not validate sort order. If input files are not sorted, the comparison logic produces incorrect results silently.</p>
+        <p><strong>Modernised system:</strong> Consider adding sort-order validation (detect if current key &lt; previous key and raise an error).</p>
+
+        <h2>Section 8: Constraints</h2>
+        <table>
+            <thead>
+                <tr><th>Constraint</th><th>Detail</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Sort order</td><td>Both inputs must be sorted ascending on bytes 3–19 before this process runs</td></tr>
+                <tr><td>Record length</td><td>All records are exactly 1341 bytes</td></tr>
+                <tr><td>Key is opaque</td><td>This process does not decode the comparison key — it compares raw bytes</td></tr>
+                <tr><td>No transformation</td><td>Output records are identical to input records. No fields are modified.</td></tr>
+                <tr><td>Run frequency</td><td>Daily path only. Must not run on month-end path.</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Section 9: Traceability</h2>
+        <table>
+            <thead>
+                <tr><th>FR</th><th>BRS Rule</th><th>COBOL Source</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>FR-001</td><td>BR-002</td><td>OPEN INPUT / OPEN OUTPUT statements</td></tr>
+                <tr><td>FR-002</td><td>BR-012</td><td>READ INMAST AT END / MOVE HIGH-VALUES</td></tr>
+                <tr><td>FR-004</td><td>BR-010</td><td>PERFORM B-MAIN UNTIL W-EOF-MAST='Y' AND W-EOF-CHG='Y'</td></tr>
+                <tr><td>FR-005</td><td>BR-006</td><td>INMAST-REC(3:17) / INCHG-REC(3:17)</td></tr>
+                <tr><td>FR-009</td><td>BR-007, BR-008</td><td>IF W-COMPARE-MAST > W-COMPARE-CHG / WRITE OUTMAST-REC</td></tr>
+                <tr><td>FR-012</td><td>BR-003, BR-004</td><td>IF W-COMPARE-MAST = W-COMPARE-CHG / WRITE OUTREJ-REC</td></tr>
+                <tr><td>FR-014</td><td>BR-011</td><td>CLOSE statements</td></tr>
+            </tbody>
+        </table>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>COBOL Renewal Framework — AI-assisted legacy modernisation</p>
+        </div>
+    </footer>
+</body>
+</html>

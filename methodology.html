@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Methodology — COBOL Renewal Framework</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <div class="breadcrumb"><a href="index.html">← Back to Overview</a></div>
+            <h1>Methodology</h1>
+            <div class="page-nav page-nav-top">
+                <a href="breakthrough.html" class="page-nav-link">← Prev: The Breakthrough</a>
+                <a href="why-this-works.html" class="page-nav-link">Next: Why This Works →</a>
+            </div>
+        </div>
+    </div>
+
+    <main class="container content">
+        <p>The framework is built on proven engineering methodologies — not ad-hoc prompting. Agents do the work, not the LLM. Every technique was chosen to produce outputs that are auditable, traceable, and implementable in any language.</p>
+
+        <img src="img/process.png" alt="Methodology — building specs first" class="full-width-img">
+
+        <h2>1. EARS — Easy Approach to Requirements Syntax</h2>
+        <p>EARS is a structured natural language notation for writing unambiguous, testable requirements. Developed at Rolls-Royce for safety-critical systems, it uses fixed sentence patterns with the keyword <strong>SHALL</strong>.</p>
+        
+        <p>When reverse engineering COBOL, the extracted business rules must be:</p>
+        <ul>
+            <li><strong>Technology-agnostic</strong> — they describe what the system does, not how</li>
+            <li><strong>Unambiguous</strong> — one interpretation only</li>
+            <li><strong>Testable</strong> — each rule can be verified with a specific test case</li>
+            <li><strong>Traceable</strong> — each rule links back to source code and forward to implementation</li>
+        </ul>
+
+        <div class="callout">
+            <p><strong>Example (BR-018):</strong> "The billing deduplication process SHALL only run during the daily processing path (i.e., when the current processing month is the same as the previous processing month)." → Traces to source line 442.</p>
+        </div>
+
+        <h3>The Five Patterns</h3>
+        <table>
+            <thead>
+                <tr><th>Pattern</th><th>Template</th><th>Use When</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Ubiquitous</td><td>The system SHALL [action]</td><td>Always-active constraint</td></tr>
+                <tr><td>Event-driven</td><td>WHEN [event] the system SHALL [action]</td><td>Triggered by occurrence</td></tr>
+                <tr><td>Unwanted behaviour</td><td>IF [condition] THEN the system SHALL [action]</td><td>Error/exception handling</td></tr>
+                <tr><td>State-driven</td><td>WHILE [state] the system SHALL [action]</td><td>During a persisting condition</td></tr>
+                <tr><td>Optional</td><td>WHERE [feature] the system SHALL [action]</td><td>Environment-specific logic</td></tr>
+            </tbody>
+        </table>
+
+        <h2>2. Nine-Section Specification Format</h2>
+        <p>A standardised document structure ensuring every specification covers the same ground, regardless of who writes it.</p>
+
+        <table>
+            <thead>
+                <tr><th>#</th><th>Section</th><th>Key Question</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>1</td><td>Overview</td><td>What is this component and where does it fit?</td></tr>
+                <tr><td>2</td><td>Inputs</td><td>What goes in?</td></tr>
+                <tr><td>3</td><td>Outputs</td><td>What comes out?</td></tr>
+                <tr><td>4–6</td><td>Rules / Requirements / Design</td><td>What does it do / How does it work?</td></tr>
+                <tr><td>7</td><td>Error Handling</td><td>What happens when things go wrong?</td></tr>
+                <tr><td>8</td><td>Constraints</td><td>What must be true for this to work?</td></tr>
+                <tr><td>9</td><td>Traceability</td><td>Where did this come from and where does it go?</td></tr>
+            </tbody>
+        </table>
+
+        <div class="callout warning">
+            <p><strong>Why Section 7 matters:</strong> In legacy COBOL, error handling is often absent (ABEND on unexpected condition), implicit, or inconsistent. By forcing explicit error behaviour in every spec, the modernised system doesn't inherit undefined behaviour.</p>
+        </div>
+
+        <h2>3. Multi-Language Technical Design</h2>
+        <p>The AI doesn't just describe the past — it designs the future. Because business rules are technology-agnostic, technical designs can be generated in multiple languages from the same BRS:</p>
+        
+        <table>
+            <thead>
+                <tr><th>Language</th><th>Best For</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Python</strong></td><td>Rapid data enrichment, complex analytics, prototyping</td></tr>
+                <tr><td><strong>Go</strong></td><td>High-concurrency, low-latency processing, single-binary deployment</td></tr>
+                <tr><td><strong>Java</strong></td><td>Standard enterprise deployment, integration with existing JVM services</td></tr>
+            </tbody>
+        </table>
+
+        <p>Technology choice becomes a strategic decision made <em>after</em> analysis — not a constraint imposed before understanding.</p>
+
+        <h2>4. Phased Delivery with Quality Gates</h2>
+        <p>The biggest risk in COBOL modernisation is moving to implementation before analysis is complete. Phased delivery with explicit gates prevents this:</p>
+
+        <table>
+            <thead>
+                <tr><th>Phase</th><th>Gate (must pass before next phase)</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Source Discovery</td><td>"All referenced artefacts are available"</td></tr>
+                <tr><td>Full Analysis</td><td>"No missing pieces, all branches understood"</td></tr>
+                <tr><td>Wiki Generation</td><td>"Every fact is source-referenced and confidence-marked"</td></tr>
+                <tr><td>Spec Generation</td><td>"All 9 sections present, traceability unbroken"</td></tr>
+                <tr><td>Gap Resolution</td><td>"All HIGH-priority gaps resolved with SME"</td></tr>
+                <tr><td>Implementation</td><td>"Byte-identical output confirmed by equivalence test"</td></tr>
+            </tbody>
+        </table>
+
+        <div class="callout">
+            <p><strong>Proactive risk reduction:</strong> The AI identifies missing artefacts <em>before</em> analysis begins — preventing the costly mid-project stalls typical of manual discovery.</p>
+        </div>
+
+        <h2>5. Gap-First Honesty &amp; Transparency</h2>
+        <p>A common failure mode in reverse engineering:</p>
+        <div class="callout warning">
+            <p>"I think I understand what this does" → proceeds to implement → produces wrong output</p>
+        </div>
+        <p>The framework's approach:</p>
+        <div class="callout success">
+            <p>"I don't fully understand what this does" → flags it as a GAP → proceeds with everything else → resolves the gap with SME input before implementing</p>
+        </div>
+        
+        <p>In our PoC, the AI identified instances where WRITE statements were commented out in the COBOL source, causing <strong>silent record drops</strong>. In a traditional modernisation, these errors are often ported to the new system. By surfacing these upfront, the framework ensures transparency — moving from simply "running a legacy process" to <strong>owning the business logic</strong> that governs every transaction.</p>
+
+        <h2>6. Equivalence Testing</h2>
+        <p>The new system must produce <strong>byte-identical output</strong> to the COBOL before any "improvements" are made — this is non-negotiable, and it's the only assertion that requires zero assumptions about downstream consumers. Once proven equivalent, you can make deliberate, documented changes, each with a decision log entry explaining why the deviation is acceptable.</p>
+
+        <h2>7. Human-in-the-Loop: Empowering, Not Replacing</h2>
+        <p>The AI accelerates the heavy lifting of analysis. It empowers rather than replaces your professionals.</p>
+        
+        <table>
+            <thead>
+                <tr><th>Capability</th><th>AI Does</th><th>Human Does</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Read thousands of lines of COBOL</td><td>✓ Fast, thorough</td><td>Slow, error-prone</td></tr>
+                <tr><td>Identify patterns and extract rules</td><td>✓ Consistent</td><td>Variable quality</td></tr>
+                <tr><td>Generate structured documentation</td><td>✓ Tireless</td><td>Time-consuming</td></tr>
+                <tr><td>Validate rules against business intent</td><td>✗ No business knowledge</td><td>✓ Domain expertise</td></tr>
+                <tr><td>Decide architectural approach</td><td>✗ No strategic context</td><td>✓ Knows team/budget/infra</td></tr>
+                <tr><td>Resolve ambiguities in code</td><td>✗ Cannot know intent</td><td>✓ Can ask original authors</td></tr>
+                <tr><td>Provide test data</td><td>✗ No production access</td><td>✓ Operations teams</td></tr>
+                <tr><td>Approve for production</td><td>✗ Cannot accept risk</td><td>✓ Risk decision authority</td></tr>
+            </tbody>
+        </table>
+    </main>
+
+    <div class="container">
+        <div class="page-nav page-nav-bottom">
+            <a href="breakthrough.html" class="page-nav-link">← Prev: The Breakthrough</a>
+            <a href="index.html" class="page-nav-link">Back to Overview</a>
+            <a href="why-this-works.html" class="page-nav-link">Next: Why This Works →</a>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>COBOL Renewal Framework — AI-Assisted Legacy System Modernisation</p>
+        </div>
+    </footer>
+</body>
+</html>
